@@ -4,19 +4,14 @@ import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.*;
-//import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.util.Bytes;
+
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.spark.SparkConf;
 import org.apache.spark.SparkContext;
 import org.apache.spark.sql.DataFrame;
+import org.apache.spark.sql.SQLConf;
+import org.apache.spark.sql.SQLContext;
 import org.apache.spark.sql.hive.HiveContext;
 
 
@@ -46,37 +41,53 @@ public class MavenMainHbase extends Configured {
     public static String driverName = "org.apache.hive.jdbc.HiveDriver";
     public static String table_result;
     public static void main(String[] args) throws IOException, SQLException {
+        System.setProperty("hive.metastore.uris","thrift://sandbox.kylo.io:9083");
+        //System.setProperty("hhive.scratch.dir.permission","777");
 
-//        Configuration conf = HBaseConfiguration.create();
-//
-//        conf.set("hbase.zookeeper.property.clientPort", "2181");
-//        conf.set("hbase.zookeeper.quorum", "sandbox.kylo.io");
-//        conf.set("zookeeper.znode.parent", "/hbase-unsecure");
-//
-//       org.apache.hadoop.hbase.client.Connection connection
-//               = ConnectionFactory.createConnection(conf);
+        final SparkConf conf = new SparkConf().setAppName("SparkHive")
+                .setMaster("local").setSparkHome("/usr/hdp/current/spark-client");
+        //     conf.set("spark.sql.warehouse.dir","/apps/hive/warehouse");
+        //    conf.set("hive.metastore.uris","thrift://sandbox.kylo.io:9083");
+        conf.set("spark.yarn.dist.files","file:/usr/hdp/2.5.6.0-40/spark/conf/hive-site.xml");
+        conf.set("spark.sql.hive.metastore.version","1.2.1");
+   //     conf.set("spark.sql.hive.metastore.jars","/usr/hdp/2.5.6.0-40/hive/lib/*:/usr/hdp/2.5.6.0-40/hadoop/lib/*");
+        SparkContext sc = new SparkContext(conf);
 
-        try {
-             table_result= new MavenMainHbase().
-                     connectHive
-                             ("firehose",
-                                     "firehoseingestionsemantictest", "1502739840775");
+        //  SQLContext hiveContext = new SQLContext(sc);
+       /*hiveContext.setConf("hive.metastore.uris","thrift://sandbox.kylo.io:9083");*/
+        SQLContext hiveContext = new HiveContext(sc);
+        //    hiveContext.setConf("hive.metastore.uris","thrift://sandbox.kylo.io:9083");
+
+        hiveContext.setConf("hive.metastore.uris","thrift://sandbox.kylo.io:9083");
+        sc.version();
+        //    hiveContext.setConf("hive.metastore.uris","thrift://sandbox.kylo.io:9083");
+        //  hiveContext.setConf("hive.metastore.warehouse.dir","/apps/hive/warehouse");
+        hiveContext.sql("show tables in TCGA").show();
+        // hiveContext.sql("select count(*) from firebrowse_simple_flow").show();
+
+
+
+
+//        try {
+//             table_result= new MavenMainHbase().
+//                     connectHive
+//                             ("firehose",
+//                                     "firehoseingestionsemantictest", "1502739840775");
 //         new MavenMainHbase()
 //                   .pushOntologiesData
 //                           ("firehose",
 //                                    table_result, connection);
-            table_result = "hbase_"+ table_result;
+//            table_result = "hbase_"+ table_result;
 
 //            args[0] = "firehose";
 //            args[1] = table_result;
 
-            ToolRunner.run(new BufferedMutatorHbaseFill(),
-                    args);
+//            ToolRunner.run(new BufferedMutatorHbaseFill(),args);
 
-        } catch (Exception e)
-        {
-            e.printStackTrace();
-        }
+//        } catch (Exception e)
+//        {
+//            e.printStackTrace();
+//        }
     }
 
     public String connectHive(String my_db, String my_table, String my_ts)
@@ -105,14 +116,14 @@ public class MavenMainHbase extends Configured {
         int i=0;
         String sub_query="";
         while(i<hbase_col_desc.length){
-                 sub_query += "cf1:"+ hbase_col_desc[i].split(" ")[0]+",";
-                    i++;
+            sub_query += "cf1:"+ hbase_col_desc[i].split(" ")[0]+",";
+            i++;
         }
         sub_query=sub_query.replaceAll(",$","");
         String sub_query_overwrite = sub_query.replaceAll("cf1:", "");
 
         ResultSet checktest = stmt.executeQuery("SHOW TABLES LIKE '"
-               + my_table + "_temp1'");
+                + my_table + "_temp1'");
 
 
         if(checktest.next()==false) {
@@ -140,8 +151,8 @@ public class MavenMainHbase extends Configured {
             stmt.execute(sql);
 
             String a = "INSERT INTO TABLE " + my_table + "_temp1(" +
-                 "key," + sub_query_overwrite + ") " +
-                 "SELECT reflect(\"java.util.UUID\",\"randomUUID\")" +
+                    "key," + sub_query_overwrite + ") " +
+                    "SELECT reflect(\"java.util.UUID\",\"randomUUID\")" +
                     " as key,* from " + my_table;
 
             stmt.execute(a);
@@ -160,4 +171,4 @@ public class MavenMainHbase extends Configured {
     }
 
 
-    }
+}
