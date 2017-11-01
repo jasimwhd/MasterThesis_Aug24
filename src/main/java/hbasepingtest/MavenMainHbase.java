@@ -30,10 +30,9 @@ import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;
 
+
 public class MavenMainHbase extends Configured {
-    static final String REST_URL = "http://data.bioontology.org";
-    static final String API_KEY = "83ec6817-48e5-434b-b087-6ea879f424a3";
-    static final ObjectMapper mapper = new ObjectMapper();
+
 
     /**
      * Initialization
@@ -46,48 +45,26 @@ public class MavenMainHbase extends Configured {
 
         final SparkConf conf = new SparkConf().setAppName("SparkHive")
                 .setMaster("local").setSparkHome("/usr/hdp/current/spark-client");
-        //     conf.set("spark.sql.warehouse.dir","/apps/hive/warehouse");
-        //    conf.set("hive.metastore.uris","thrift://sandbox.kylo.io:9083");
         conf.set("spark.yarn.dist.files","file:/usr/hdp/2.5.6.0-40/spark/conf/hive-site.xml");
         conf.set("spark.sql.hive.metastore.version","1.2.1");
-   //     conf.set("spark.sql.hive.metastore.jars","/usr/hdp/2.5.6.0-40/hive/lib/*:/usr/hdp/2.5.6.0-40/hadoop/lib/*");
         SparkContext sc = new SparkContext(conf);
 
-        //  SQLContext hiveContext = new SQLContext(sc);
-       /*hiveContext.setConf("hive.metastore.uris","thrift://sandbox.kylo.io:9083");*/
-        SQLContext hiveContext = new HiveContext(sc);
-        //    hiveContext.setConf("hive.metastore.uris","thrift://sandbox.kylo.io:9083");
+         SQLContext hiveContext = new HiveContext(sc);
 
         hiveContext.setConf("hive.metastore.uris","thrift://sandbox.kylo.io:9083");
         sc.version();
-        //    hiveContext.setConf("hive.metastore.uris","thrift://sandbox.kylo.io:9083");
-        //  hiveContext.setConf("hive.metastore.warehouse.dir","/apps/hive/warehouse");
-        hiveContext.sql("show tables in TCGA").show();
-        // hiveContext.sql("select count(*) from firebrowse_simple_flow").show();
+
+        String db="TCGA";
+        String table= "firebrowse_test_valid";
+
+     //  DataFrame df = hiveContext.sql("USE " + db).toDF();
 
 
 
 
-//        try {
-//             table_result= new MavenMainHbase().
-//                     connectHive
-//                             ("firehose",
-//                                     "firehoseingestionsemantictest", "1502739840775");
-//         new MavenMainHbase()
-//                   .pushOntologiesData
-//                           ("firehose",
-//                                    table_result, connection);
-//            table_result = "hbase_"+ table_result;
+        DataFrame DD1=new DataDictionary().generateDataDictionary(db, hiveContext, table);
 
-//            args[0] = "firehose";
-//            args[1] = table_result;
 
-//            ToolRunner.run(new BufferedMutatorHbaseFill(),args);
-
-//        } catch (Exception e)
-//        {
-//            e.printStackTrace();
-//        }
     }
 
     public String connectHive(String my_db, String my_table, String my_ts)
