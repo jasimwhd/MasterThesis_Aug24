@@ -1,34 +1,16 @@
 package hbasepingtest;
 
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 
-import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolRunner;
 import org.apache.spark.SparkConf;
 import org.apache.spark.SparkContext;
 import org.apache.spark.sql.DataFrame;
-import org.apache.spark.sql.SQLConf;
-import org.apache.spark.sql.SQLContext;
 import org.apache.spark.sql.hive.HiveContext;
 
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import java.io.BufferedReader;
-import java.io.Closeable;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.sql.*;
 import java.sql.Connection;
-import java.util.ArrayList;
-import java.util.List;
 
 
 public class MavenMainHbase extends Configured {
@@ -49,7 +31,7 @@ public class MavenMainHbase extends Configured {
         conf.set("spark.sql.hive.metastore.version","1.2.1");
         SparkContext sc = new SparkContext(conf);
 
-         SQLContext hiveContext = new HiveContext(sc);
+         HiveContext hiveContext = new HiveContext(sc);
 
         hiveContext.setConf("hive.metastore.uris","thrift://sandbox.kylo.io:9083");
         sc.version();
@@ -62,7 +44,9 @@ public class MavenMainHbase extends Configured {
 
 
 
-        DataFrame DD1=new DataDictionary().generateDataDictionary(db, hiveContext, table);
+        new DataDictionary().generateSchemaDataDictionary(db, hiveContext, table);
+
+        new DataDictionary().generateInstanceDataDictionary(db, hiveContext, table);
 
 
     }
