@@ -21,32 +21,36 @@ public class MavenMainHbase extends Configured {
      */
     public static String driverName = "org.apache.hive.jdbc.HiveDriver";
     public static String table_result;
+
     public static void main(String[] args) throws IOException, SQLException {
-        System.setProperty("hive.metastore.uris","thrift://sandbox.kylo.io:9083");
+        System.setProperty("hive.metastore.uris", "thrift://sandbox.kylo.io:9083");
         //System.setProperty("hhive.scratch.dir.permission","777");
 
+
         final SparkConf conf = new SparkConf().setAppName("SparkHive")
+
                 .setMaster("local").setSparkHome("/usr/hdp/current/spark-client");
-        conf.set("spark.yarn.dist.files","file:/usr/hdp/2.5.6.0-40/spark/conf/hive-site.xml");
-        conf.set("spark.sql.hive.metastore.version","1.2.1");
+        //hive-site.xml mapped to our conf object
+        conf.set("spark.yarn.dist.files", "file:/usr/hdp/2.5.6.0-40/spark/conf/hive-site.xml");
+        //connect to our existing hive metastore version to avoid creation of new db instance
+        conf.set("spark.sql.hive.metastore.version", "1.2.1");
         SparkContext sc = new SparkContext(conf);
 
-         HiveContext hiveContext = new HiveContext(sc);
+        HiveContext hiveContext = new HiveContext(sc);
 
-        hiveContext.setConf("hive.metastore.uris","thrift://sandbox.kylo.io:9083");
-        sc.version();
+        //connect spark to hive through thrift api
+        hiveContext.setConf("hive.metastore.uris", "thrift://sandbox.kylo.io:9083");
 
-        String db="TCGA";
-        String table= "firebrowse_test_valid";
+        String db = args[0];
+        String table = args[1];
+        String timestamp = args[2];
+        //  DataFrame df = hiveContext.sql("USE " + db).toDF();
 
-     //  DataFrame df = hiveContext.sql("USE " + db).toDF();
+        //generate data dictionary at table level
+        //new DataDictionary().generateSchemaDataDictionary(db, hiveContext, table, timestamp);
 
-
-
-
-        new DataDictionary().generateSchemaDataDictionary(db, hiveContext, table);
-
-        new DataDictionary().generateInstanceDataDictionary(db, hiveContext, table);
+        //generate data dictionary at record level
+        new DataDictionary().generateInstanceDataDictionary(db, hiveContext, table,timestamp);
 
 
     }
@@ -64,30 +68,30 @@ public class MavenMainHbase extends Configured {
         System.out.println("hello");
         Statement stmt = con1.createStatement();
         String original_table = ("describe " + my_table);
-        ResultSet o_table =stmt.executeQuery(original_table);
+        ResultSet o_table = stmt.executeQuery(original_table);
 
-        String col_desc="";
-        while(o_table.next())
-            col_desc += o_table.getString(1) + " " + o_table.getString(2) + "," ;
+        String col_desc = "";
+        while (o_table.next())
+            col_desc += o_table.getString(1) + " " + o_table.getString(2) + ",";
 
-        col_desc =col_desc.replaceAll(",$","");
+        col_desc = col_desc.replaceAll(",$", "");
 
         String hbase_col_desc[] = col_desc.split(",");
 
-        int i=0;
-        String sub_query="";
-        while(i<hbase_col_desc.length){
-            sub_query += "cf1:"+ hbase_col_desc[i].split(" ")[0]+",";
+        int i = 0;
+        String sub_query = "";
+        while (i < hbase_col_desc.length) {
+            sub_query += "cf1:" + hbase_col_desc[i].split(" ")[0] + ",";
             i++;
         }
-        sub_query=sub_query.replaceAll(",$","");
+        sub_query = sub_query.replaceAll(",$", "");
         String sub_query_overwrite = sub_query.replaceAll("cf1:", "");
 
         ResultSet checktest = stmt.executeQuery("SHOW TABLES LIKE '"
                 + my_table + "_temp1'");
 
 
-        if(checktest.next()==false) {
+        if (checktest.next() == false) {
             String sql = "CREATE TABLE " + my_table + "_temp1" +
                     "(key string, " + col_desc +
                     ", or1_evaluation_score string, or1_pref_name string," +
