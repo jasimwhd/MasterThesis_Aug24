@@ -26,7 +26,7 @@ public class DataDictionary {
     void generateSchemaDataDictionary(String db, SQLContext sqlContext, String table, String timestamp)
     {
 
-        String df_query= "select * from " + db +"."+ table;
+        String df_query= "select * from " + db +"."+ table+"_valid";
         DataFrame df = sqlContext.sql(df_query).toDF();
 
         StructType schema= df.schema();
@@ -38,7 +38,7 @@ public class DataDictionary {
                 + "preferred_type string, "
                 + "preferred_label string, "
                 + "ontology_uri string, "
-                + "timestamp string) ";
+                + "ts string) ";
 
         DataFrame dd = sqlContext.sql(query);
 
@@ -46,6 +46,7 @@ public class DataDictionary {
 
         JsonNode resources;
         for (int i = 0; i < df_struct.length; i++) {
+
             //Get the available resources
             String resourcesString = get(REST_URL + "/recommender?input="
            + df_struct[i].name());
@@ -58,7 +59,10 @@ public class DataDictionary {
 
             // Get the ontologies from the link we found
             JsonNode desc_node = jsonToNode(get(desc_url));
-            String desc=  desc_node.findValue("definition").asText();
+
+
+            String desc=  ((desc_node.findValue("definition").get(0)) == null)
+                    ? "" : (desc_node.findValue("definition").get(0).asText());
 
             String pref_name = node.get("coverageResult")
                     .get("annotations")
@@ -81,7 +85,7 @@ public class DataDictionary {
                     "'"+pref_type+ "'"+ " as preferred_type, "+
                     "'"+pref_name+ "'"+ " as preferred_label, " +
                     "'"+ont_uri+ "'"+ " as ontology_uri, " +
-                    "'"+timestamp+ "'"+ " as timestamp ";
+                    "'"+timestamp+ "'"+ " as ts ";
 
 
             DataFrame data= sqlContext.sql(DD_Schema_insert);
@@ -93,7 +97,7 @@ public class DataDictionary {
 
     void generateInstanceDataDictionary(String db, SQLContext sqlContext, String table, String timestamp)
     {
-        String df_query= "select * from " + db +"."+ table;
+        String df_query= "select * from " + db +"."+ table+"_valid";
         DataFrame df = sqlContext.sql(df_query).toDF();
 
         String query="CREATE TABLE IF NOT EXISTS " + db+ "."
@@ -101,47 +105,56 @@ public class DataDictionary {
                 + "(feed_name string, "
                 + "field_name string, "
                 + "field_value string, "
+                + "frequency int, "
                 + "description string, "
                 + "preferred_type string, "
                 + "preferred_label string, "
                 + "ontology_uri string, "
-                + "timestamp string) ";
+                + "ts string) ";
 
         JsonNode resources;
 
-        DataFrame dd = sqlContext.sql(query);
+        sqlContext.sql(query);
 
     //    StructField[] df_struct= df.schema().fields();
         for (int i = 0; i < df.columns().length; i++) {
-            DataFrame temp= df.select(df.columns()[i]).distinct();
-            Row[] r= temp.collect();
-
-            if(i==1)
-                System.out.println("yes");
+            Row[] r=df.groupBy(df.columns()[i]).count().collect();
 
             ArrayList<String> resourcesString=new ArrayList<>();
 
             for (int i1 = 0; i1 < r.length; i1++) {
                 resourcesString
-                        .add(get(REST_URL + "/recommender?input=" +r[i1].toString()));
+                        .add(get(REST_URL + "/recommender?input=" +r[i1].get(0).toString()));
             }
 
             for (int i1 = 0; i1 < resourcesString.size(); i1++) {
 
                 resources = jsonToNode(resourcesString.get(i1));
                 JsonNode node= resources.get(0);
-                String desc_url= node.get("coverageResult").get("annotations").get(0).get("annotatedClass").get("links").findValue("self").asText();
+                String desc_url= ((node
+                        .get("coverageResult")
+                        .get("annotations")
+                        .get(0)
+                        .get("annotatedClass")
+                        .get("links")
+                        .findValue("self"))==null)
+                        ? "" :
+                        (node.get("coverageResult")
+                                .get("annotations")
+                                .get(0)
+                                .get("annotatedClass")
+                                .get("links")
+                                .findValue("self")).asText();
 
                // Get the ontologies from the link we found
                 JsonNode desc_node = jsonToNode(get(desc_url));
-                String desc=  desc_node.findValue("definition").get(0).asText();
+                String desc=  ((desc_node.findValue("definition").get(0)) == null)
+                        ? "" : (desc_node.findValue("definition").get(0).asText());
 
                 String pref_name = node.get("coverageResult")
                         .get("annotations")
                         .get(0)
                         .findValue("text").asText();
-
-                String desc1=  desc_node.findValue("definition").asText();
 
 
                 String pref_type = node.get("coverageResult")
@@ -156,12 +169,13 @@ public class DataDictionary {
                 String DD_Instance_insert="select "+
                         "'" + table+"'" + " as feed_name, "+
                         "'" + df.schema().fields()[i].name()+"'" + " as field_name, "+
-                        "'" + r[i1].toString()+"'" + " as field_value, "+
+                        "'" + r[i1].get(0).toString()+"'" + " as field_value, "+
+                        Integer.parseInt(r[i1].get(1).toString())+ " as frequency, "+
                         "'"+desc+ "'"+ " as description, "+
                         "'"+pref_type+ "'"+ " as preferred_type, "+
                         "'"+pref_name+ "'"+ " as preferred_label, " +
                         "'"+ont_uri+ "'"+ " as ontology_uri, "+
-                        "'"+timestamp+ "'"+ " as timestamp) ";
+                        "'"+timestamp+ "'"+ " as ts";
 
 
                 DataFrame data= sqlContext.sql(DD_Instance_insert);
