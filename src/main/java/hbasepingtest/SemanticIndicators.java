@@ -14,7 +14,7 @@ public class SemanticIndicators {
             sqlContext, String table, String timestamp) {
         //---------------------**generate no match indicator **-----------------------------------
         //those attributes that do not qualify in DD_instance are automatically considered for no match indicator
-        DataFrame df = sqlContext.sql("select * from " + db + "." + table
+        /*DataFrame df = sqlContext.sql("select * from " + db + "." + table
                 + "_valid where processing_dttm=" +
                 "'" + timestamp + "'").toDF();
 
@@ -56,43 +56,43 @@ public class SemanticIndicators {
                 + "_valid where processing_dttm=" +
                 "'" + timestamp + "'"
         );
-
+*/
         //---------------------**generate valid match indicator **-----------------------------------
-        DataFrame df_valid = sqlContext.sql("select dd_instance.field_name,dd_instance.field_value, dd_instance.ts" +
+        DataFrame df_valid = sqlContext.sql("select dd_instance.field_name,dd_instance.field_value, dd_instance.frequency, dd_instance.ts" +
                 " from "+db +"."+ "dd_instance, "+ db +"."+ "dominant_ontology" +
                 " where dd_instance.ontology_uri=dominant_ontology.ontology_uri" +
                 " and dd_instance.feed_name="+ "'"+ table+"'" +
                 " and dd_instance.preferred_type='PREF'" +
                 " and dd_instance.ts="+ "'"+ timestamp+"'")
-                .toDF("field_name","field_value", "processing_dttm");
+                .toDF("field_name","field_value","frequency" ,"processing_dttm");
 
         String query_valid = "CREATE TABLE IF NOT EXISTS " + db + "."
-                + table + "_semantic_valid_match " + "(field_name string, field_value string,processing_dttm string )";
+                + table + "_semantic_valid_match " + "(field_name string, field_value string, frequency int, processing_dttm string )";
 
         sqlContext.sql(query_valid);
 
 
-        df_valid.select(df_valid.col("field_name"),df_valid.col("field_value"),df_valid.col("processing_dttm"))
+        df_valid.select(df_valid.col("field_name"),df_valid.col("field_value"),df_valid.col("frequency"),df_valid.col("processing_dttm"))
                 .write()
                 .mode("append")
                 .saveAsTable(db+ "."+ table + "_semantic_valid_match ");
         //---------------------**generate partial match indicator **-----------------------------------
 
-        DataFrame df_partial = sqlContext.sql("select dd_instance.field_name,dd_instance.field_value, dd_instance.ts" +
+        DataFrame df_partial = sqlContext.sql("select dd_instance.field_name,dd_instance.field_value, dd_instance.frequency, dd_instance.ts" +
                 " from "+db +"."+ "dd_instance, "+ db +"."+ "dominant_ontology" +
                 " where dd_instance.ontology_uri=dominant_ontology.ontology_uri" +
                 " and dd_instance.feed_name="+ "'"+ table+"'" +
                 " and dd_instance.preferred_type='SYN'" +
                 " and dd_instance.ts="+ "'"+ timestamp+"'")
-                .toDF("field_name","field_value", "processing_dttm");
+                .toDF("field_name","field_value", "frequency", "processing_dttm");
 
         String query_partial = "CREATE TABLE IF NOT EXISTS " + db + "."
-                + table + "_semantic_partial_valid_match " + "(field_name string, field_value string,processing_dttm string )";
+                + table + "_semantic_partial_valid_match " + "(field_name string, field_value string, frequency int, processing_dttm string )";
 
-        sqlContext.sql(query_valid);
+        sqlContext.sql(query_partial);
 
 
-        df_partial.select(df_partial.col("field_name"),df_partial.col("field_value"),df_partial.col("processing_dttm"))
+        df_partial.select(df_partial.col("field_name"),df_partial.col("field_value"),df_partial.col("frequency"),df_partial.col("processing_dttm"))
                 .write()
                 .mode("append")
                 .saveAsTable(db+ "."+ table + "_semantic_partial_valid_match ");
