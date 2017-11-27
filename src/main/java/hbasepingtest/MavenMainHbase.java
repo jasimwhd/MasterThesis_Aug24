@@ -44,19 +44,18 @@ public class MavenMainHbase extends Configured {
         String db = args[0];
         String table = args[1];
         String timestamp = args[2];
-        //  DataFrame df = hiveContext.sql("USE " + db).toDF();
 
         //generate data dictionary at table level
-        //new DataDictionary().generateSchemaDataDictionary(db, hiveContext, table, timestamp);
+        new DataDictionary().generateSchemaDataDictionary(db, hiveContext, table, timestamp);
 
         //generate data dictionary at record level
-        //new DataDictionary().generateInstanceDataDictionary(db, hiveContext, table,timestamp);
+        new DataDictionary().generateInstanceDataDictionary(db, hiveContext, table,timestamp);
 
         //generate dominant ontology for each column based on data dictionary
         new DominantOntology().generateDominantOntology(db, hiveContext, table, timestamp);
 
-
-
+        //generate Semantic Indicators - no match, partial match and full match
+        new SemanticIndicators().generateSemanticIndicators(db, hiveContext, table, timestamp);
     }
 
 
