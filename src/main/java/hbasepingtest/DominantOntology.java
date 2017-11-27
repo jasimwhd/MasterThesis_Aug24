@@ -35,13 +35,9 @@ public class DominantOntology {
                     "'"+dom_results[i].get(1)+ "'"+ " as ontology_uri, "+
                     "'"+timestamp+ "'"+ " as ts ";
 
-
-
             DataFrame data= sqlContext.sql(DO_Instance_insert);
 
             data.write().mode("append").saveAsTable(db+ "."+ "dominant_ontology");
-
-
         }
 
 

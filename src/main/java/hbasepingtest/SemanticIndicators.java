@@ -30,7 +30,6 @@ public class SemanticIndicators {
 
         sqlContext.sql(query);
 
-/*
         DataFrame lookup = sqlContext.sql("select distinct(field_name) " +
                 " from " + db + "." + "dd_instance "
                 + " where feed_name=" + "'" + table + "'"
@@ -57,7 +56,6 @@ public class SemanticIndicators {
                 + "_valid where processing_dttm=" +
                 "'" + timestamp + "'"
         );
-*/
 
         //---------------------**generate valid match indicator **-----------------------------------
         DataFrame df_valid = sqlContext.sql("select dd_instance.field_name,dd_instance.field_value, dd_instance.ts" +
